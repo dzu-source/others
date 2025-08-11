@@ -1,0 +1,18 @@
+# Ignore sensitive files
+*.key
+*.conf
+*.log
+preshared.key
+privatekey
+publickey
+shadowsocks.json
+wg0.conf
+client.conf
+
+# Ignore build artifacts
+/dist
+/build
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
