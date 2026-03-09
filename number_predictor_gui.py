@@ -79,7 +79,14 @@ class NumberPredictorApp:
             # Find all numbers, including optional negative signs and decimals
             number_strings = re.findall(r'-?\d+(?:\.\d+)?', content)
 
-            self.numbers = [float(num) for num in number_strings]
+            # Convert to float first, then filter for integers between 1 and 50
+            parsed_numbers = []
+            for num in number_strings:
+                val = float(num)
+                if val.is_integer() and 1 <= int(val) <= 50:
+                    parsed_numbers.append(int(val))
+
+            self.numbers = parsed_numbers
 
             self.txt_data.config(state=tk.NORMAL)
             self.txt_data.delete(1.0, tk.END)
@@ -169,11 +176,29 @@ def headless_test():
 
     root = tk.Tk()
     app = NumberPredictorApp(root)
-    # Create dummy data
+    # Create dummy data with out of bounds and floats
     with open("dummy_test.txt", "w") as f:
-        f.write("10 20 30 40 50 60 70 80 90 100")
+        f.write("-5 0 1 10 20 30 40 50 51 100 20.5")
 
-    app.numbers = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+    # We spoof the load function for testing
+    class DummyEvent:
+        pass
+
+    def dummy_askopenfilename(*args, **kwargs):
+        return "dummy_test.txt"
+
+    import tkinter.filedialog
+    original_askopenfilename = tkinter.filedialog.askopenfilename
+    tkinter.filedialog.askopenfilename = dummy_askopenfilename
+
+    app.load_file()
+    print(f"Parsed numbers: {app.numbers}", flush=True)
+
+    tkinter.filedialog.askopenfilename = original_askopenfilename
+
+    # Mock numbers if needed, but let's test what it parsed
+    app.numbers = [10, 20, 30, 40, 50, 10, 20, 30, 40, 50]
+
     X, y = app.prepare_data()
     print(f"Data prepared. X shape: {X.shape}, y shape: {y.shape}", flush=True)
     app.train_model()
@@ -182,7 +207,7 @@ def headless_test():
     # Manually test prediction logic
     last_window = np.array(app.numbers[-app.window_size:]).reshape(1, -1)
     pred = app.model.predict(last_window)[0]
-    print(f"Prediction for next number after 100: {pred}", flush=True)
+    print(f"Prediction for next number after 50: {pred}", flush=True)
     print("Headless test complete.", flush=True)
 
     # Keep the output so tests pass, remove manual sys.exit and let test finish normally
